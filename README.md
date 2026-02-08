@@ -12,14 +12,27 @@ Run [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) entirely
 ## Quick Start
 
 ```bash
+# 1. Start everything (Ollama + Spring Forge UI)
+docker compose up -d
+
+# 2. Pull a coding model
+docker exec ollama ollama pull qwen3-coder
+
+# 3. Open the Spring Forge UI
+#    → http://localhost:8080
+```
+
+The **Spring Forge** web UI is a Java Spring-focused code generator that connects to your local Ollama instance. Features include dark/light mode, quick templates (REST controllers, JPA entities, services, etc.), streaming code output, and one-click download of `.java` files.
+
+### Claude Code (Terminal) Setup
+
+```bash
 # 1. Install Claude Code (if not already installed)
 npm install -g @anthropic-ai/claude-code
 
 # 2. Run the setup script (starts Ollama + pulls default model)
 chmod +x setup.sh
-./setup.sh                     # defaults to qwen3-coder
-# or
-./setup.sh glm-4.7-flash      # pick a different model
+./setup.sh
 
 # 3. Launch Claude Code
 ANTHROPIC_BASE_URL=http://localhost:11434 \
