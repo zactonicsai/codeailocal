@@ -39,7 +39,7 @@ services:
           sleep 2
         done
         echo "Pulling and running qwen3-coder..."
-        ollama run qwen3-coder --keepalive 0 ""
+        ollama run qwen2.5-coder:0.5b --keepalive 0 ""
       '
     restart: "no"
 
