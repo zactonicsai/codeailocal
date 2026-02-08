@@ -12,17 +12,17 @@ Run [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) entirely
 ## Quick Start
 
 ```bash
-# 1. Start everything (Ollama + Spring Forge UI)
+# 1. Start everything (Ollama + Zactonics AI Spring Forge UI)
 docker compose up -d
 
 # 2. Pull a coding model
 docker exec ollama ollama pull qwen3-coder
 
-# 3. Open the Spring Forge UI
+# 3. Open the Zactonics AI Spring Forge UI
 #    → http://localhost:8080
 ```
 
-The **Spring Forge** web UI is a Java Spring-focused code generator that connects to your local Ollama instance. Features include dark/light mode, quick templates (REST controllers, JPA entities, services, etc.), streaming code output, and one-click download of `.java` files.
+The **Zactonics AI Spring Forge** web UI is a Java Spring-focused code generator that connects to your local Ollama instance. Features include dark/light mode, quick templates (REST controllers, JPA entities, services, etc.), streaming code output, and one-click download of `.java` files.
 
 ### Claude Code (Terminal) Setup
 
