@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    # Uncomment the appropriate section for your hardware:
+
+    # --- NVIDIA GPU support ---
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+    # --- AMD GPU support (ROCm) ---
+    # image: ollama/ollama:rocm
+    # devices:
+    #   - /dev/kfd
+    #   - /dev/dri
+
+  # One-shot service to pull the default model on first run
+  model-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-model-pull
+    depends_on:
+      - ollama
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for Ollama to be ready...'
+        until curl -sf http://ollama:11434/api/tags > /dev/null 2>&1; do
+          sleep 2
+        done
+        echo 'Pulling qwen3-coder (default coding model)...'
+        curl -s http://ollama:11434/api/pull -d '{\"name\": \"qwen3-coder\"}'
+        echo ''
+        echo 'Model pull complete!'
+      "
+    restart: "no"
+
+volumes:
+  ollama_data:
