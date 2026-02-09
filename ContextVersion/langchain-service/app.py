@@ -566,6 +566,83 @@ async def reload_snippets():
     return {"status": "reloaded", "count": chroma.count()}
 
 
+# -- Snippet CRUD endpoints ----------------------------------------------------
+
+class SnippetCreateRequest(BaseModel):
+    id: Optional[str] = Field(default=None, description="Unique snippet ID (auto-generated if empty)")
+    category: str = Field(..., min_length=1, description="Category: rest, entity, service, repo, dto, security, test, exception, config")
+    title: str = Field(..., min_length=1, description="Snippet title")
+    description: str = Field(..., min_length=1, description="Short description of the snippet")
+    code: str = Field(..., min_length=1, description="The Java code snippet")
+
+
+@app.post("/snippets/add")
+async def add_snippet(req: SnippetCreateRequest):
+    """Add a new best-practice snippet to ChromaDB (embeds and indexes it immediately)."""
+    if chroma is None:
+        raise HTTPException(status_code=503, detail="ChromaDB not initialized")
+
+    import re
+    # Generate ID from title if not provided
+    snippet_id = req.id or re.sub(r'[^a-z0-9]+', '-', req.title.lower()).strip('-')
+    logger.info("Adding snippet: id=%s category=%s title=%s", snippet_id, req.category, req.title)
+
+    # Build document text (same format as seed_snippets)
+    doc_text = f"{req.title}\n{req.description}\n\n{req.code}"
+
+    # Embed the snippet
+    try:
+        embedding = get_embedding(doc_text[:2000])
+        logger.info("Snippet embedded: %d dimensions", len(embedding))
+    except Exception as e:
+        logger.error("Failed to embed snippet: %s", e)
+        raise HTTPException(status_code=502, detail=f"Embedding failed: {e}")
+
+    # Add to ChromaDB
+    try:
+        chroma.add(
+            ids=[snippet_id],
+            documents=[doc_text],
+            metadatas=[{
+                "category": req.category,
+                "title": req.title,
+                "description": req.description,
+            }],
+            embeddings=[embedding],
+        )
+        logger.info("Snippet added to ChromaDB: %s", snippet_id)
+    except Exception as e:
+        logger.error("Failed to add snippet to ChromaDB: %s", e)
+        raise HTTPException(status_code=500, detail=f"ChromaDB insert failed: {e}")
+
+    return {
+        "status": "added",
+        "id": snippet_id,
+        "count": chroma.count(),
+    }
+
+
+@app.delete("/snippets/{snippet_id}")
+async def delete_snippet(snippet_id: str):
+    """Delete a snippet from ChromaDB by ID."""
+    if chroma is None:
+        raise HTTPException(status_code=503, detail="ChromaDB not initialized")
+
+    logger.info("Deleting snippet: %s", snippet_id)
+    try:
+        chroma._req(
+            "POST",
+            f"{chroma._db_prefix}/collections/{chroma.collection_id}/delete",
+            json={"ids": [snippet_id]},
+        )
+        logger.info("Snippet deleted: %s", snippet_id)
+    except Exception as e:
+        logger.error("Failed to delete snippet: %s", e)
+        raise HTTPException(status_code=500, detail=f"Delete failed: {e}")
+
+    return {"status": "deleted", "id": snippet_id, "count": chroma.count()}
+
+
 # -- Debug endpoint ------------------------------------------------------------
 
 @app.post("/generate/debug")

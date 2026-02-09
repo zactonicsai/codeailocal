@@ -147,6 +147,12 @@
         <span id="rag-snippet-count">0 snippets</span>
       </div>
 
+      <!-- Snippet Manager -->
+      <button onclick="openSnippetManager()" class="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer bg-gray-100 dark:bg-forge-800 border-gray-200 dark:border-forge-800 text-gray-500 dark:text-gray-400 hover:text-spring-500 hover:border-spring-500/40" title="Manage RAG snippets">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        <span>Snippets</span>
+      </button>
+
       <!-- Model selector -->
       <select id="model-select" class="text-xs font-mono bg-gray-100 dark:bg-forge-800 border border-gray-200 dark:border-forge-800 rounded-lg px-2.5 py-1.5 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-spring-500 cursor-pointer">
         <option value="qwen3-coder">qwen3-coder</option>
@@ -348,6 +354,91 @@
     </div>
   </div>
 
+  <!-- ═══════════════ SNIPPET MANAGER MODAL ═══════════════ -->
+  <div id="snippet-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white dark:bg-forge-900 rounded-2xl w-full max-w-3xl max-h-[90vh] shadow-2xl border border-gray-200 dark:border-forge-800 fade-in flex flex-col overflow-hidden">
+
+      <!-- Modal header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-forge-800">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-spring-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+          <h3 class="text-lg font-bold">Snippet Manager</h3>
+          <span id="snippet-modal-count" class="text-xs font-mono px-2 py-0.5 rounded-full bg-spring-500/10 text-spring-500">0 snippets</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="toggleSnippetView()" id="snippet-view-toggle" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-spring-500 text-white hover:bg-spring-600 transition-colors">+ Add New</button>
+          <button onclick="closeSnippetManager()" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-forge-800 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab: Snippet list -->
+      <div id="snippet-list-view" class="flex-1 overflow-auto p-6">
+        <div id="snippet-list" class="space-y-2">
+          <p class="text-sm text-gray-400 text-center py-8">Loading snippets...</p>
+        </div>
+      </div>
+
+      <!-- Tab: Add snippet form -->
+      <div id="snippet-add-view" class="hidden flex-1 overflow-auto p-6">
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-[11px] font-mono text-gray-400 dark:text-gray-500 block mb-1 uppercase tracking-wider">Title *</label>
+              <input id="snip-title" type="text" placeholder="e.g. WebSocket Config Best Practice"
+                class="w-full text-sm bg-gray-50 dark:bg-forge-850 border border-gray-200 dark:border-forge-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-spring-500" />
+            </div>
+            <div>
+              <label class="text-[11px] font-mono text-gray-400 dark:text-gray-500 block mb-1 uppercase tracking-wider">Category *</label>
+              <select id="snip-category"
+                class="w-full text-sm bg-gray-50 dark:bg-forge-850 border border-gray-200 dark:border-forge-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-spring-500">
+                <option value="rest">rest — REST Controllers</option>
+                <option value="entity">entity — JPA Entities</option>
+                <option value="service">service — Service Layer</option>
+                <option value="repo">repo — Repositories</option>
+                <option value="dto">dto — DTOs &amp; Mappers</option>
+                <option value="security">security — Security Config</option>
+                <option value="test">test — Unit / Integration Tests</option>
+                <option value="exception">exception — Exception Handling</option>
+                <option value="config">config — Application Config</option>
+                <option value="other">other — Custom Category</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-mono text-gray-400 dark:text-gray-500 block mb-1 uppercase tracking-wider">Custom ID <span class="text-gray-300 dark:text-gray-600">(optional — auto-generated from title)</span></label>
+            <input id="snip-id" type="text" placeholder="e.g. websocket-config-best-practice"
+              class="w-full text-sm font-mono bg-gray-50 dark:bg-forge-850 border border-gray-200 dark:border-forge-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-spring-500" />
+          </div>
+
+          <div>
+            <label class="text-[11px] font-mono text-gray-400 dark:text-gray-500 block mb-1 uppercase tracking-wider">Description *</label>
+            <input id="snip-description" type="text" placeholder="Brief description of when and why to use this pattern"
+              class="w-full text-sm bg-gray-50 dark:bg-forge-850 border border-gray-200 dark:border-forge-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-spring-500" />
+          </div>
+
+          <div>
+            <label class="text-[11px] font-mono text-gray-400 dark:text-gray-500 block mb-1 uppercase tracking-wider">Java Code * <span class="text-gray-300 dark:text-gray-600">(include // Best Practice: comments)</span></label>
+            <textarea id="snip-code" rows="14" placeholder="package com.example...&#10;&#10;// Best Practice: Explain WHY this pattern is used..."
+              class="w-full text-sm font-mono bg-gray-50 dark:bg-forge-850 border border-gray-200 dark:border-forge-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-spring-500 resize-y leading-relaxed"></textarea>
+          </div>
+
+          <div id="snip-error" class="hidden text-sm text-red-500 bg-red-500/10 rounded-lg px-3 py-2"></div>
+
+          <div class="flex justify-end gap-2">
+            <button onclick="toggleSnippetView()" class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-forge-800 hover:bg-gray-200 dark:hover:bg-forge-700 transition-colors">Cancel</button>
+            <button onclick="submitSnippet()" id="snip-submit-btn" class="px-4 py-2 text-sm rounded-lg bg-spring-500 text-white hover:bg-spring-600 transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              Add Snippet
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ══════════════════════════════════════════
     // STATE
@@ -496,6 +587,194 @@
         document.getElementById('rag-snippet-count').textContent = 'offline';
       }
     }
+
+    // ══════════════════════════════════════════
+    // SNIPPET MANAGER
+    // ══════════════════════════════════════════
+    let snippetViewMode = 'list'; // 'list' or 'add'
+
+    function openSnippetManager() {
+      document.getElementById('snippet-modal').classList.remove('hidden');
+      snippetViewMode = 'list';
+      showSnippetListView();
+      loadSnippetList();
+    }
+
+    function closeSnippetManager() {
+      document.getElementById('snippet-modal').classList.add('hidden');
+      // Refresh the RAG badge count
+      checkRagHealth();
+    }
+
+    function toggleSnippetView() {
+      if (snippetViewMode === 'list') {
+        snippetViewMode = 'add';
+        showSnippetAddView();
+      } else {
+        snippetViewMode = 'list';
+        showSnippetListView();
+      }
+    }
+
+    function showSnippetListView() {
+      document.getElementById('snippet-list-view').classList.remove('hidden');
+      document.getElementById('snippet-add-view').classList.add('hidden');
+      document.getElementById('snippet-view-toggle').textContent = '+ Add New';
+    }
+
+    function showSnippetAddView() {
+      document.getElementById('snippet-list-view').classList.add('hidden');
+      document.getElementById('snippet-add-view').classList.remove('hidden');
+      document.getElementById('snippet-view-toggle').textContent = '← Back to List';
+      document.getElementById('snip-error').classList.add('hidden');
+      // Clear form
+      document.getElementById('snip-title').value = '';
+      document.getElementById('snip-id').value = '';
+      document.getElementById('snip-description').value = '';
+      document.getElementById('snip-code').value = '';
+      document.getElementById('snip-category').value = 'rest';
+    }
+
+    async function loadSnippetList() {
+      const container = document.getElementById('snippet-list');
+      container.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Loading snippets...</p>';
+
+      try {
+        const res = await fetch(`${ragBaseUrl}/snippets`, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        document.getElementById('snippet-modal-count').textContent = `${data.count} snippets`;
+
+        if (data.count === 0) {
+          container.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">No snippets loaded. Add your first one!</p>';
+          return;
+        }
+
+        // Category color map
+        const catColors = {
+          rest: 'bg-blue-500/10 text-blue-500',
+          entity: 'bg-purple-500/10 text-purple-500',
+          service: 'bg-amber-500/10 text-amber-500',
+          repo: 'bg-cyan-500/10 text-cyan-500',
+          dto: 'bg-pink-500/10 text-pink-500',
+          security: 'bg-red-500/10 text-red-500',
+          test: 'bg-green-500/10 text-green-500',
+          exception: 'bg-orange-500/10 text-orange-500',
+          config: 'bg-teal-500/10 text-teal-500',
+        };
+
+        container.innerHTML = data.snippets.map(s => {
+          const colorClass = catColors[s.category] || 'bg-gray-500/10 text-gray-500';
+          return `
+            <div class="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 dark:border-forge-800 hover:border-spring-500/30 hover:bg-spring-500/5 transition-all group">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-sm font-medium truncate">${escapeHtml(s.title)}</span>
+                  <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${colorClass}">${escapeHtml(s.category)}</span>
+                </div>
+                <p class="text-xs text-gray-400 dark:text-gray-500 truncate">${escapeHtml(s.description || s.id)}</p>
+              </div>
+              <button onclick="deleteSnippet('${escapeHtml(s.id)}')" class="ml-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-gray-300 hover:text-red-500 transition-all" title="Delete snippet">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"/></svg>
+              </button>
+            </div>`;
+        }).join('');
+
+      } catch (e) {
+        container.innerHTML = `<p class="text-sm text-red-400 text-center py-8">Failed to load snippets: ${e.message}<br><span class="text-xs text-gray-500">Is the RAG service running?</span></p>`;
+      }
+    }
+
+    async function submitSnippet() {
+      const title = document.getElementById('snip-title').value.trim();
+      const category = document.getElementById('snip-category').value;
+      const customId = document.getElementById('snip-id').value.trim();
+      const description = document.getElementById('snip-description').value.trim();
+      const code = document.getElementById('snip-code').value.trim();
+      const errorEl = document.getElementById('snip-error');
+      const submitBtn = document.getElementById('snip-submit-btn');
+
+      // Validation
+      if (!title || !description || !code) {
+        errorEl.textContent = 'Title, description, and code are required.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      errorEl.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" class="opacity-75"/></svg> Embedding & Adding...';
+
+      try {
+        const body = { title, category, description, code };
+        if (customId) body.id = customId;
+
+        const res = await fetch(`${ragBaseUrl}/snippets/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const errData = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errData}`);
+        }
+
+        const result = await res.json();
+        showToast(`Snippet "${title}" added (${result.count} total)`);
+
+        // Switch back to list view
+        snippetViewMode = 'list';
+        showSnippetListView();
+        loadSnippetList();
+
+      } catch (e) {
+        errorEl.textContent = `Failed to add snippet: ${e.message}`;
+        errorEl.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add Snippet';
+      }
+    }
+
+    async function deleteSnippet(snippetId) {
+      if (!confirm(`Delete snippet "${snippetId}"? This cannot be undone.`)) return;
+
+      try {
+        const res = await fetch(`${ragBaseUrl}/snippets/${encodeURIComponent(snippetId)}`, {
+          method: 'DELETE',
+        });
+
+        if (!res.ok) {
+          const errData = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errData}`);
+        }
+
+        const result = await res.json();
+        showToast(`Snippet deleted (${result.count} remaining)`);
+        loadSnippetList();
+
+      } catch (e) {
+        showToast(`Delete failed: ${e.message}`);
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Close snippet modal on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('snippet-modal');
+        if (!modal.classList.contains('hidden')) {
+          closeSnippetManager();
+        }
+      }
+    });
 
     // ══════════════════════════════════════════
     // CONNECTION CHECK
