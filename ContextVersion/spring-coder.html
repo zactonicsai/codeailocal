@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zactonics AI Spring Forge — Java Spring Code Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            spring: {
+              50:  '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#6db33f',
+              600: '#5a9a34',
+              700: '#477a29',
+              800: '#365f20',
+              900: '#1a3a10',
+            },
+            forge: {
+              50:  '#fafaf9',
+              100: '#f0efed',
+              200: '#e2e0dc',
+              800: '#1e1e1e',
+              850: '#181818',
+              900: '#121212',
+              950: '#0a0a0a',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    .dark ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+    /* Code area */
+    #code-output {
+      font-family: 'JetBrains Mono', monospace;
+      tab-size: 4;
+      line-height: 1.65;
+    }
+
+    /* Typing cursor blink */
+    .cursor-blink::after {
+      content: '▌';
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* Leaf logo spin on hover */
+    .leaf-logo { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .leaf-logo:hover { transform: rotate(360deg); }
+
+    /* Subtle grain overlay */
+    .grain::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.025;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Fade-in animation */
+    .fade-in { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Textarea auto-resize */
+    #prompt-input {
+      field-sizing: content;
+      min-height: 48px;
+      max-height: 200px;
+    }
+
+    /* Glow ring on focus */
+    .glow-ring:focus-within {
+      box-shadow: 0 0 0 2px rgba(109, 179, 63, 0.3);
+    }
+
+    /* Status dot pulse */
+    .status-pulse { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Line numbers */
+    .line-number {
+      user-select: none;
+      min-width: 3ch;
+      text-align: right;
+    }
+  </style>
+</head>
+
+<body class="grain bg-forge-50 dark:bg-forge-950 text-gray-800 dark:text-gray-200 transition-colors duration-300 min-h-screen flex flex-col">
+
+  <!-- ═══════════════ HEADER ═══════════════ -->
+  <header class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-forge-800 bg-white/70 dark:bg-forge-900/70 backdrop-blur-md sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <!-- Spring Leaf SVG -->
+      <svg class="leaf-logo w-8 h-8 text-spring-500" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 28C16 28 6 20 6 12C6 6 10 2 16 2C22 2 26 6 26 12C26 20 16 28 16 28Z" fill="currentColor" opacity="0.15"/>
+        <path d="M16 28C16 28 6 20 6 12C6 6 10 2 16 2C22 2 26 6 26 12C26 20 16 28 16 28Z"/>
+        <path d="M16 8V22"/>
+        <path d="M12 12L16 16L20 10"/>
+      </svg>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight leading-none">Zactonics AI Spring Forge</h1>
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 font-mono tracking-wide">JAVA SPRING CODE GENERATOR</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Connection status -->
+      <div id="status-badge" class="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-gray-100 dark:bg-forge-800 text-gray-500 dark:text-gray-400 cursor-pointer" onclick="checkConnection()" title="Click to check Ollama connection">
+        <span id="status-dot" class="w-2 h-2 rounded-full bg-gray-400"></span>
+        <span id="status-text">Checking…</span>
+      </div>
+
+      <!-- RAG toggle -->
+      <button id="rag-toggle" onclick="toggleRag()" class="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer bg-gray-100 dark:bg-forge-800 border-gray-200 dark:border-forge-800 text-gray-500 dark:text-gray-400" title="Toggle RAG context (retrieves best-practice snippets from ChromaDB)">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        <span id="rag-label">RAG Off</span>
+      </button>
+
+      <!-- RAG status -->
+      <div id="rag-status-badge" class="hidden flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-spring-500/10 text-spring-500 dark:text-spring-400">
+        <span class="w-1.5 h-1.5 rounded-full bg-spring-400 status-pulse"></span>
+        <span id="rag-snippet-count">0 snippets</span>
+      </div>
+
+      <!-- Model selector -->
+      <select id="model-select" class="text-xs font-mono bg-gray-100 dark:bg-forge-800 border border-gray-200 dark:border-forge-800 rounded-lg px-2.5 py-1.5 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-spring-500 cursor-pointer">
+        <option value="qwen3-coder">qwen3-coder</option>
+        <option value="glm-4.7-flash">glm-4.7-flash</option>
+        <option value="devstral">devstral</option>
+        <option value="qwen2.5-coder:0.5b">qwen2.5-coder:0.5b</option>
+      </select>
+
+      <!-- Dark/Light toggle -->
+      <button id="theme-toggle" onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-forge-800 transition-colors" title="Toggle theme">
+        <svg id="icon-sun" class="w-5 h-5 hidden dark:block text-gray-400 hover:text-yellow-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-gray-500 hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════ MAIN ═══════════════ -->
+  <main class="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden">
+
+    <!-- LEFT: Prompt panel -->
+    <section class="lg:w-[420px] flex flex-col border-r border-gray-200 dark:border-forge-800 bg-white dark:bg-forge-900">
+
+      <!-- Template chips -->
+      <div class="p-4 pb-2 border-b border-gray-100 dark:border-forge-800">
+        <p class="text-[11px] font-mono text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wider">Quick Templates</p>
+        <div class="flex flex-wrap gap-1.5" id="template-chips">
+          <button onclick="useTemplate('rest')" class="chip">REST Controller</button>
+          <button onclick="useTemplate('entity')" class="chip">JPA Entity</button>
+          <button onclick="useTemplate('service')" class="chip">Service Layer</button>
+          <button onclick="useTemplate('repo')" class="chip">Repository</button>
+          <button onclick="useTemplate('dto')" class="chip">DTO + Mapper</button>
+          <button onclick="useTemplate('security')" class="chip">Security Config</button>
+          <button onclick="useTemplate('test')" class="chip">Unit Test</button>
+          <button onclick="useTemplate('exception')" class="chip">Exception Handler</button>
+          <button onclick="useTemplate('events')" class="chip">Event Driven</button>
+          <button onclick="useTemplate('config')" class="chip">App Config</button>
+        </div>
+      </div>
+      <style>
+        .chip {
+          font-size: 12px;
+          font-family: 'JetBrains Mono', monospace;
+          padding: 5px 10px;
+          border-radius: 6px;
+          border: 1px solid;
+          transition: all 0.15s;
+          cursor: pointer;
+        }
+        .dark .chip {
+          background: transparent;
+          border-color: #2a2a2a;
+          color: #9ca3af;
+        }
+        .dark .chip:hover {
+          background: #1a2e10;
+          border-color: #6db33f;
+          color: #6ee7b7;
+        }
+        .chip {
+          background: transparent;
+          border-color: #e5e5e5;
+          color: #6b7280;
+        }
+        .chip:hover {
+          background: #f0fdf4;
+          border-color: #6db33f;
+          color: #477a29;
+        }
+      </style>
+
+      <!-- Prompt input area -->
+      <div class="flex-1 flex flex-col p-4 gap-3">
+        <label class="text-[11px] font-mono text-gray-400 dark:text-gray-500 uppercase tracking-wider">Describe your Spring component</label>
+        <div class="flex-1 flex flex-col glow-ring rounded-xl border border-gray-200 dark:border-forge-800 bg-gray-50 dark:bg-forge-850 overflow-hidden transition-shadow">
+          <textarea
+            id="prompt-input"
+            class="flex-1 w-full resize-none bg-transparent p-4 text-sm leading-relaxed placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none"
+            placeholder="e.g. Create a REST controller for a User entity with CRUD endpoints, pagination, and validation…"
+            rows="6"
+          ></textarea>
+          <div class="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-forge-800/50">
+            <span class="text-[11px] font-mono text-gray-400 dark:text-gray-500">
+              <kbd class="px-1 py-0.5 rounded bg-gray-200 dark:bg-forge-800 text-[10px]">Ctrl</kbd>+<kbd class="px-1 py-0.5 rounded bg-gray-200 dark:bg-forge-800 text-[10px]">Enter</kbd> to send
+            </span>
+            <button
+              id="send-btn"
+              onclick="sendPrompt()"
+              class="flex items-center gap-2 px-4 py-2 bg-spring-500 hover:bg-spring-600 text-white text-sm font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-spring-500/20 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              Generate
+            </button>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="mt-auto">
+          <p class="text-[11px] font-mono text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">History</p>
+          <div id="history-list" class="flex flex-col gap-1 max-h-32 overflow-y-auto text-xs font-mono text-gray-400 dark:text-gray-500">
+            <p class="italic text-gray-300 dark:text-gray-600">No prompts yet</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Code output panel -->
+    <section class="flex-1 flex flex-col bg-white dark:bg-forge-950 overflow-hidden">
+
+      <!-- Code toolbar -->
+      <div class="flex items-center justify-between px-5 py-2.5 border-b border-gray-200 dark:border-forge-800 bg-gray-50 dark:bg-forge-900/50">
+        <div class="flex items-center gap-3">
+          <span id="filename-label" class="text-xs font-mono text-gray-500 dark:text-gray-400">Generated.java</span>
+          <span id="line-count" class="text-[10px] font-mono text-gray-400 dark:text-gray-600"></span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="copyCode()" class="toolbar-btn" title="Copy code">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <span>Copy</span>
+          </button>
+          <button onclick="downloadCode()" class="toolbar-btn" title="Download .java file">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <span>Download</span>
+          </button>
+          <button onclick="clearOutput()" class="toolbar-btn" title="Clear output">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+      <style>
+        .toolbar-btn {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          font-family: 'JetBrains Mono', monospace;
+          padding: 5px 10px;
+          border-radius: 6px;
+          transition: all 0.15s;
+          cursor: pointer;
+          border: none;
+          background: transparent;
+        }
+        .dark .toolbar-btn { color: #9ca3af; }
+        .dark .toolbar-btn:hover { background: #1e1e1e; color: #6ee7b7; }
+        .toolbar-btn { color: #6b7280; }
+        .toolbar-btn:hover { background: #f0fdf4; color: #477a29; }
+      </style>
+
+      <!-- Code display -->
+      <div class="flex-1 overflow-auto p-0" id="code-scroll-container">
+        <!-- Empty state -->
+        <div id="empty-state" class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+          <svg class="w-16 h-16 text-gray-200 dark:text-forge-800" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="8" y="4" width="48" height="56" rx="4"/>
+            <path d="M20 20l6 6-6 6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M32 34h12" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M16 12h32M16 12h32" opacity="0.3"/>
+          </svg>
+          <div>
+            <p class="text-sm font-medium text-gray-400 dark:text-gray-500">No code generated yet</p>
+            <p class="text-xs text-gray-300 dark:text-gray-600 mt-1">Describe a Spring component and hit Generate</p>
+          </div>
+        </div>
+
+        <!-- Code output with line numbers -->
+        <div id="code-container" class="hidden fade-in">
+          <pre class="flex text-[13px] leading-[1.65]"><code id="line-numbers" class="line-number py-5 pl-4 pr-3 text-gray-300 dark:text-forge-800 select-none border-r border-gray-100 dark:border-forge-800 sticky left-0 bg-white dark:bg-forge-950"></code><code id="code-output" class="py-5 px-5 flex-1 overflow-x-auto whitespace-pre text-gray-700 dark:text-gray-300"></code></pre>
+        </div>
+      </div>
+
+      <!-- Bottom status bar -->
+      <div class="flex items-center justify-between px-5 py-1.5 border-t border-gray-100 dark:border-forge-800 bg-gray-50/50 dark:bg-forge-900/30 text-[10px] font-mono text-gray-400 dark:text-gray-600">
+        <span id="gen-status">Ready</span>
+        <span>Spring Boot • Java 17+ • Ollama Local • LangChain RAG</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══════════════ SETTINGS MODAL ═══════════════ -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white dark:bg-forge-900 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200 dark:border-forge-800 fade-in">
+      <h3 class="text-lg font-bold mb-4">Connection Settings</h3>
+      <label class="text-xs font-mono text-gray-500 dark:text-gray-400 block mb-1">Ollama Base URL</label>
+      <input id="base-url-input" type="text" value="http://localhost:11434"
+        class="w-full text-sm font-mono bg-gray-50 dark:bg-forge-850 border border-gray-200 dark:border-forge-800 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-1 focus:ring-spring-500" />
+      <div class="flex justify-end gap-2">
+        <button onclick="closeSettings()" class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-forge-800 hover:bg-gray-200 dark:hover:bg-forge-700 transition-colors">Cancel</button>
+        <button onclick="saveSettings()" class="px-4 py-2 text-sm rounded-lg bg-spring-500 text-white hover:bg-spring-600 transition-colors">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TOAST ═══════════════ -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+    <div class="flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium bg-forge-900 text-white dark:bg-white dark:text-forge-900 fade-in">
+      <svg class="w-4 h-4 text-spring-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+      <span id="toast-text">Copied!</span>
+    </div>
+  </div>
+
+  <script>
+    // ══════════════════════════════════════════
+    // STATE
+    // ══════════════════════════════════════════
+    // Auto-detect: if served from Docker (port 8080), use nginx proxy; otherwise direct Ollama
+    const defaultUrl = window.location.port === '8080'
+      ? `${window.location.origin}/ollama`
+      : 'http://localhost:11434';
+    const ragBaseUrl = window.location.port === '8080'
+      ? `${window.location.origin}/rag`
+      : 'http://localhost:8100';
+    let baseUrl = localStorage.getItem('ollama-url') || defaultUrl;
+    let generatedCode = '';
+    let isGenerating = false;
+    let ragEnabled = localStorage.getItem('rag-enabled') === 'true';
+    let history = JSON.parse(localStorage.getItem('spring-forge-history') || '[]');
+    let abortController = null;
+
+    // ══════════════════════════════════════════
+    // TEMPLATES
+    // ══════════════════════════════════════════
+    const templates = {
+      rest: `Create a Spring Boot REST controller for a Product entity with:
+- CRUD endpoints (GET all with pagination, GET by id, POST, PUT, DELETE)
+- Request validation using @Valid
+- Proper HTTP status codes and ResponseEntity
+- Swagger/OpenAPI annotations`,
+
+      entity: `Create a JPA entity class for an Order with:
+- Auto-generated UUID primary key
+- Fields: customerName, orderDate, status (enum), totalAmount, items (OneToMany)
+- Auditing fields (createdAt, updatedAt) with @EntityListeners
+- Lombok annotations
+- Table and column constraints`,
+
+      service: `Create a Spring service layer for a User entity with:
+- Constructor-based dependency injection
+- CRUD operations with proper exception handling
+- Transactional annotations
+- Logging with SLF4J
+- Business logic validation`,
+
+      repo: `Create a Spring Data JPA repository for a Product entity with:
+- Custom query methods using @Query (JPQL and native)
+- Pagination and sorting support
+- Optional-returning find methods
+- Specification-based dynamic queries
+- Projection interface for partial data`,
+
+      dto: `Create DTOs and a MapStruct mapper for a Customer entity with:
+- CustomerCreateDTO (for POST requests with validation)
+- CustomerUpdateDTO (for PUT/PATCH)
+- CustomerResponseDTO (for API responses)
+- MapStruct mapper interface with custom mappings
+- Nested address DTO`,
+
+      security: `Create a Spring Security configuration with:
+- JWT-based authentication
+- SecurityFilterChain bean configuration
+- Password encoder bean
+- CORS configuration
+- Role-based access control for API endpoints
+- Custom AuthenticationEntryPoint`,
+
+      test: `Create JUnit 5 unit tests for a UserService with:
+- @ExtendWith(MockitoExtension.class)
+- Mocked repository with @Mock and @InjectMocks
+- Tests for CRUD operations
+- Edge cases (not found, duplicate, validation)
+- AssertJ assertions
+- @DisplayName annotations`,
+
+      exception: `Create a global exception handler with:
+- @RestControllerAdvice
+- Handlers for common exceptions (NotFound, BadRequest, Validation, Conflict)
+- Structured ErrorResponse DTO with timestamp, status, message, details
+- Validation error field mapping
+- Logging of exceptions`,
+
+      events: `Create an event-driven Spring service with:
+- An immutable event record (e.g., OrderCreatedEvent) using Java 17 records
+- A service that publishes events via ApplicationEventPublisher
+- A @TransactionalEventListener(AFTER_COMMIT) that processes the event asynchronously
+- @Async on the listener method
+- SLF4J logging of event processing
+- Decoupled side effects (email, audit) from the main transaction`,
+
+      config: `Create a Spring Boot application.yml configuration with:
+- PostgreSQL datasource with HikariCP pool tuning
+- JPA hibernate settings (ddl-auto: validate, open-in-view: false, batch fetch)
+- Jackson serialization (non-null, ISO dates)
+- Graceful shutdown
+- Actuator health/metrics endpoints
+- Logging levels for app, Hibernate SQL, and security
+- Environment variable placeholders for secrets`
+    };
+
+    // ══════════════════════════════════════════
+    // THEME
+    // ══════════════════════════════════════════
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    }
+
+    // Init theme
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.classList.remove('dark');
+    }
+
+    // ══════════════════════════════════════════
+    // RAG TOGGLE
+    // ══════════════════════════════════════════
+    function toggleRag() {
+      ragEnabled = !ragEnabled;
+      localStorage.setItem('rag-enabled', ragEnabled);
+      updateRagUI();
+      if (ragEnabled) checkRagHealth();
+    }
+
+    function updateRagUI() {
+      const btn = document.getElementById('rag-toggle');
+      const label = document.getElementById('rag-label');
+      const badge = document.getElementById('rag-status-badge');
+      if (ragEnabled) {
+        btn.classList.remove('bg-gray-100', 'dark:bg-forge-800', 'border-gray-200', 'dark:border-forge-800', 'text-gray-500', 'dark:text-gray-400');
+        btn.classList.add('bg-spring-500/10', 'border-spring-500/40', 'text-spring-500', 'dark:text-spring-400');
+        label.textContent = 'RAG On';
+        badge.classList.remove('hidden');
+      } else {
+        btn.classList.remove('bg-spring-500/10', 'border-spring-500/40', 'text-spring-500', 'dark:text-spring-400');
+        btn.classList.add('bg-gray-100', 'dark:bg-forge-800', 'border-gray-200', 'dark:border-forge-800', 'text-gray-500', 'dark:text-gray-400');
+        label.textContent = 'RAG Off';
+        badge.classList.add('hidden');
+      }
+    }
+
+    async function checkRagHealth() {
+      try {
+        const res = await fetch(`${ragBaseUrl}/health`, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('rag-snippet-count').textContent = `${data.snippet_count} snippets`;
+        }
+      } catch {
+        document.getElementById('rag-snippet-count').textContent = 'offline';
+      }
+    }
+
+    // ══════════════════════════════════════════
+    // CONNECTION CHECK
+    // ══════════════════════════════════════════
+    async function checkConnection() {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      dot.className = 'w-2 h-2 rounded-full bg-yellow-400 status-pulse';
+      text.textContent = 'Connecting…';
+
+      try {
+        const res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const data = await res.json();
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+          text.textContent = `Online (${data.models?.length || 0} models)`;
+
+          // Populate model selector with available models
+          const select = document.getElementById('model-select');
+          const currentVal = select.value;
+          if (data.models?.length) {
+            select.innerHTML = '';
+            data.models.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m.name;
+              opt.textContent = m.name;
+              select.appendChild(opt);
+            });
+            // Restore selection if available
+            if ([...select.options].some(o => o.value === currentVal)) {
+              select.value = currentVal;
+            }
+          }
+        } else {
+          throw new Error('Bad response');
+        }
+      } catch {
+        dot.className = 'w-2 h-2 rounded-full bg-red-400';
+        text.textContent = 'Offline';
+      }
+    }
+
+    // ══════════════════════════════════════════
+    // PROMPT SENDING (Streaming via Anthropic Messages API or RAG)
+    // ══════════════════════════════════════════
+    async function sendPrompt() {
+      const input = document.getElementById('prompt-input');
+      const prompt = input.value.trim();
+      if (!prompt || isGenerating) return;
+
+      isGenerating = true;
+      generatedCode = '';
+      const sendBtn = document.getElementById('send-btn');
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" class="opacity-75"/></svg> Generating…`;
+
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('code-container').classList.remove('hidden');
+      document.getElementById('gen-status').textContent = ragEnabled ? 'Fetching context + Generating…' : 'Generating…';
+
+      const codeEl = document.getElementById('code-output');
+      const lineNumsEl = document.getElementById('line-numbers');
+      codeEl.textContent = '';
+      codeEl.classList.add('cursor-blink');
+      lineNumsEl.textContent = '1';
+
+      const model = document.getElementById('model-select').value;
+
+      abortController = new AbortController();
+
+      try {
+        if (ragEnabled) {
+          // ── RAG-enhanced path: call LangChain service ──
+          await ragGenerate(prompt, model, codeEl);
+        } else {
+          // ── Direct path: call Ollama directly ──
+          await directGenerate(prompt, model, codeEl);
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          showToast('Generation cancelled');
+        } else {
+          codeEl.textContent = `// Error: ${e.message}\n// Make sure services are running.\n// Ollama: ${baseUrl}\n// RAG: ${ragBaseUrl}`;
+          updateLineNumbers();
+        }
+      }
+
+      codeEl.classList.remove('cursor-blink');
+      isGenerating = false;
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Generate`;
+      document.getElementById('gen-status').textContent = generatedCode ? `Done — ${generatedCode.split('\n').length} lines${ragEnabled ? ' (RAG)' : ''}` : 'Ready';
+
+      // Clean code (strip markdown fences if model outputs them anyway)
+      generatedCode = cleanCode(generatedCode);
+      renderCode(generatedCode);
+
+      // Add to history
+      addHistory(prompt);
+    }
+
+    // ── RAG-enhanced generation via LangChain service ──
+    async function ragGenerate(prompt, model, codeEl) {
+      // Detect category from template or prompt
+      const category = detectCategory(prompt);
+
+      const res = await fetch(`${ragBaseUrl}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortController.signal,
+        body: JSON.stringify({
+          prompt: prompt,
+          model: model,
+          stream: true,
+          top_k: 3,
+          category: category,
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`RAG service error ${res.status}: ${err}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const event = JSON.parse(data);
+            if (event.type === 'content_block_delta' && event.delta?.text) {
+              generatedCode += event.delta.text;
+              renderCode(generatedCode);
+            }
+          } catch {}
+        }
+      }
+    }
+
+    // ── Direct Ollama generation (non-RAG) ──
+    async function directGenerate(prompt, model, codeEl) {
+      const systemPrompt = `You are a senior Java Spring Boot developer. You ONLY output clean, production-ready Java code. 
+
+Rules:
+- Output ONLY the Java source code, no markdown fences, no explanations, no comments outside the code
+- Use Java 17+ features where appropriate
+- Follow Spring Boot 3.x conventions
+- Include proper imports
+- Use Lombok where appropriate
+- Add Javadoc on public methods
+- Follow clean code principles
+
+Do NOT wrap code in \`\`\`java or any markdown. Output raw Java code only.`;
+
+      // Try Anthropic Messages API first
+      try {
+        const res = await fetch(`${baseUrl}/v1/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: abortController.signal,
+          body: JSON.stringify({
+            model: model,
+            max_tokens: 8192,
+            stream: true,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+
+            try {
+              const event = JSON.parse(data);
+              if (event.type === 'content_block_delta' && event.delta?.text) {
+                generatedCode += event.delta.text;
+                renderCode(generatedCode);
+              }
+            } catch {}
+          }
+        }
+      } catch {
+        // Fallback: try the /api/chat endpoint
+        await fallbackGenerate(prompt, model, systemPrompt, codeEl);
+      }
+    }
+
+    // Detect category hint from the prompt for better RAG retrieval
+    function detectCategory(prompt) {
+      const lower = prompt.toLowerCase();
+      if (lower.includes('controller') || lower.includes('rest') || lower.includes('endpoint')) return 'rest';
+      if (lower.includes('entity') || lower.includes('jpa') || lower.includes('table')) return 'entity';
+      if (lower.includes('service') || lower.includes('business logic')) return 'service';
+      if (lower.includes('repository') || lower.includes('query') || lower.includes('dao')) return 'repo';
+      if (lower.includes('dto') || lower.includes('mapper') || lower.includes('mapstruct')) return 'dto';
+      if (lower.includes('security') || lower.includes('jwt') || lower.includes('auth')) return 'security';
+      if (lower.includes('test') || lower.includes('junit') || lower.includes('mock')) return 'test';
+      if (lower.includes('exception') || lower.includes('error') || lower.includes('handler')) return 'exception';
+      if (lower.includes('cache') || lower.includes('redis') || lower.includes('config')) return 'config';
+      return null; // No category filter — search all snippets
+    }
+
+    // Fallback to Ollama native /api/chat for models without Anthropic API
+    async function fallbackGenerate(prompt, model, systemPrompt, codeEl) {
+      const res = await fetch(`${baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortController.signal,
+        body: JSON.stringify({
+          model: model,
+          stream: true,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ]
+        })
+      });
+
+      if (!res.ok) throw new Error(`Ollama error ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const event = JSON.parse(line);
+            if (event.message?.content) {
+              generatedCode += event.message.content;
+              renderCode(generatedCode);
+            }
+          } catch {}
+        }
+      }
+    }
+
+    // ══════════════════════════════════════════
+    // CODE RENDERING
+    // ══════════════════════════════════════════
+    function renderCode(code) {
+      const codeEl = document.getElementById('code-output');
+      codeEl.textContent = code;
+      updateLineNumbers();
+      // Auto-scroll
+      const container = document.getElementById('code-scroll-container');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updateLineNumbers() {
+      const code = document.getElementById('code-output').textContent;
+      const lines = code.split('\n');
+      const lineNumsEl = document.getElementById('line-numbers');
+      lineNumsEl.textContent = lines.map((_, i) => i + 1).join('\n');
+      document.getElementById('line-count').textContent = `${lines.length} lines`;
+    }
+
+    function cleanCode(code) {
+      // Strip markdown fences
+      code = code.replace(/^```java\s*\n?/gm, '');
+      code = code.replace(/^```\s*$/gm, '');
+      code = code.trim();
+      return code;
+    }
+
+    // ══════════════════════════════════════════
+    // ACTIONS
+    // ══════════════════════════════════════════
+    function copyCode() {
+      if (!generatedCode) return;
+      navigator.clipboard.writeText(generatedCode);
+      showToast('Copied to clipboard');
+    }
+
+    function downloadCode() {
+      if (!generatedCode) return;
+      // Try to extract class name for filename
+      const classMatch = generatedCode.match(/(?:public\s+)?(?:class|interface|enum|record)\s+(\w+)/);
+      const filename = classMatch ? `${classMatch[1]}.java` : 'Generated.java';
+      document.getElementById('filename-label').textContent = filename;
+
+      const blob = new Blob([generatedCode], { type: 'text/x-java-source' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Downloaded ${filename}`);
+    }
+
+    function clearOutput() {
+      generatedCode = '';
+      document.getElementById('code-output').textContent = '';
+      document.getElementById('line-numbers').textContent = '';
+      document.getElementById('line-count').textContent = '';
+      document.getElementById('code-container').classList.add('hidden');
+      document.getElementById('empty-state').classList.remove('hidden');
+      document.getElementById('gen-status').textContent = 'Ready';
+      document.getElementById('filename-label').textContent = 'Generated.java';
+    }
+
+    function useTemplate(key) {
+      document.getElementById('prompt-input').value = templates[key];
+      document.getElementById('prompt-input').focus();
+    }
+
+    // ══════════════════════════════════════════
+    // HISTORY
+    // ══════════════════════════════════════════
+    function addHistory(prompt) {
+      history.unshift({ prompt: prompt.slice(0, 100), time: new Date().toLocaleTimeString() });
+      if (history.length > 20) history.pop();
+      localStorage.setItem('spring-forge-history', JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('history-list');
+      if (!history.length) {
+        list.innerHTML = '<p class="italic text-gray-300 dark:text-gray-600">No prompts yet</p>';
+        return;
+      }
+      list.innerHTML = history.map((h, i) => `
+        <button onclick="document.getElementById('prompt-input').value=history[${i}].prompt;document.getElementById('prompt-input').focus()"
+          class="text-left px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-forge-800 transition-colors truncate"
+          title="${h.prompt}">
+          <span class="text-gray-300 dark:text-gray-600 mr-1">${h.time}</span> ${h.prompt}
+        </button>
+      `).join('');
+    }
+
+    // ══════════════════════════════════════════
+    // SETTINGS
+    // ══════════════════════════════════════════
+    function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
+    function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+    function saveSettings() {
+      baseUrl = document.getElementById('base-url-input').value.replace(/\/+$/, '');
+      localStorage.setItem('ollama-url', baseUrl);
+      closeSettings();
+      checkConnection();
+      showToast('Settings saved');
+    }
+
+    // ══════════════════════════════════════════
+    // TOAST
+    // ══════════════════════════════════════════
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2200);
+    }
+
+    // ══════════════════════════════════════════
+    // KEYBOARD SHORTCUTS
+    // ══════════════════════════════════════════
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        sendPrompt();
+      }
+      if (e.key === 'Escape' && isGenerating && abortController) {
+        abortController.abort();
+      }
+    });
+
+    // ══════════════════════════════════════════
+    // INIT
+    // ══════════════════════════════════════════
+    document.getElementById('base-url-input').value = baseUrl;
+    renderHistory();
+    checkConnection();
+    updateRagUI();
+    if (ragEnabled) checkRagHealth();
+
+    // Auto-detect filename from code
+    const observer = new MutationObserver(() => {
+      if (!generatedCode) return;
+      const match = generatedCode.match(/(?:public\s+)?(?:class|interface|enum|record)\s+(\w+)/);
+      if (match) {
+        document.getElementById('filename-label').textContent = `${match[1]}.java`;
+      }
+    });
+    observer.observe(document.getElementById('code-output'), { childList: true, characterData: true, subtree: true });
+  </script>
+</body>
+</html>

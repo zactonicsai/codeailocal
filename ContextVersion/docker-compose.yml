@@ -1,0 +1,105 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    # Uncomment the appropriate section for your hardware:
+
+    # --- NVIDIA GPU support ---
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+    # --- AMD GPU support (ROCm) ---
+    # image: ollama/ollama:rocm
+    # devices:
+    #   - /dev/kfd
+    #   - /dev/dri
+
+  # One-shot service to pull and run the model via the ollama service
+  model-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-model-pull
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: >
+      sh -c '
+        echo "Waiting for Ollama to be ready..."
+        until ollama list > /dev/null 2>&1; do
+          sleep 2
+        done
+        echo "Pulling coding model..."
+        ollama run qwen2.5-coder:0.5b --keepalive 0 ""
+        echo "Pulling embedding model for RAG..."
+        ollama pull nomic-embed-text
+      '
+    restart: "no"
+
+  # ═══════════════════════════════════════════════════════════════
+  # ChromaDB — Vector database for storing Java Spring best-practice
+  # code snippets used by the LangChain RAG pipeline.
+  # ═══════════════════════════════════════════════════════════════
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    ports:
+      - "8200:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # LangChain RAG Service — FastAPI app that:
+  #   1. Seeds ChromaDB with Java Spring best-practice code snippets
+  #   2. On each code generation request, retrieves relevant snippets
+  #      via cosine similarity search
+  #   3. Injects those snippets as context into the LLM system prompt
+  #   4. Streams the enriched response back to the Spring Forge UI
+  # ═══════════════════════════════════════════════════════════════
+  langchain-rag:
+    build:
+      context: ./langchain-service
+      dockerfile: Dockerfile
+    container_name: langchain-rag
+    ports:
+      - "8100:8100"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - EMBEDDING_MODEL=nomic-embed-text
+    depends_on:
+      - ollama
+      - chromadb
+    restart: unless-stopped
+
+  # Simple web server for the Spring Forge UI
+  spring-forge-ui:
+    image: nginx:alpine
+    container_name: spring-forge-ui
+    ports:
+      - "8080:80"
+    volumes:
+      - ./spring-coder.html:/usr/share/nginx/html/index.html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - ollama
+      - langchain-rag
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  chroma_data:
